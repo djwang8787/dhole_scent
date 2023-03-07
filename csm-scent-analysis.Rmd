@@ -1,0 +1,436 @@
+---
+title: "Olfactory-based enrichment are a poor stimulus for animal activity and visibility but not enclosure use."
+output: html_document
+date: "2023-02-08"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(dplyr, ggplot2, lme4, scales, MuMIn, vegan)
+
+data = read.csv("CSV Files/Dhole CSV.csv") %>%
+  rename(Behaviour = Interval.Channel.1.Value) %>%
+  mutate(DateTime = as.POSIXct(DateTime, format = "%d/%m/%y %H:%M"),
+         Conditions = as.factor(Conditions),
+         Behaviour = as.factor(Behaviour))
+
+EucDist <- function(vect1, vect2) sqrt(sum((vect1 - vect2)^2)) #func for calculating euc distance
+```
+
+- Olfactory-based enrichment, regardless of type, does not improve animal visibility and activity levels.
+
+```{r behaviour data analysis}
+behaviour.data = data %>%
+  select(SessionID, Frame.Number, Observer, DateTime, Group.Count, Behaviour, Conditions) %>%
+  filter(DateTime >= "2022-06-06 14:56:00") %>%
+  na.omit() %>%
+  rename_all(tolower)
+
+b.data = behaviour.data %>% #summary stats for replicates within sessions
+  group_by(conditions, sessionid) %>%
+  summarise(scent = mean(behaviour == "Investigation of scent"),
+         investigate = mean(behaviour == "Investigative Behaviour"),
+         locomotion = mean(behaviour == "Locomotion"),
+         oos = mean(behaviour == "OOS"),
+         others = mean(behaviour == "Others"),
+         positive.int = mean(behaviour == "Positive interactions"),
+         vigilance = mean(behaviour == "Resting/Vigilance"),
+         sleep = mean(behaviour == "Sleep"),
+         active = 1 - sleep - oos) %>%
+  mutate(treatment = ifelse(conditions %in% c("Baseline"), "baseline", "scent"))
+
+h.index = vector()
+for (i in 1:nrow(b.data)) {
+  h.index[i] = vegan::diversity(b.data[i, 3:10])
+}
+
+b.data$h.index = h.index
+```
+
+```{r OOS}
+oos.model = glm(oos~treatment + (1|sessionid),
+             family = binomial(),
+             data = b.data)
+
+oos.model.null = glm(oos~1 + (1|sessionid),
+                 family = binomial(),
+                 data = b.data)
+
+model.sel(oos.model, oos.model.null) # null model selected
+# scent-based enrichment, regardless of scent, does not improve OOS
+```
+
+```{r active levels}
+model1 = glmer(active~treatment + (1|sessionid),
+             family = binomial(),
+             data = b.data)
+
+model.null = glmer(active~1 + (1|sessionid),
+                 family = binomial(),
+                 data = b.data)
+model.sel(model1, model.null) # null model selected
+
+conditions.data = b.data %>%
+  filter(!conditions %in% c("Baseline"))
+model1 = glmer(active~conditions + (1|sessionid),
+             family = binomial(),
+             data = conditions.data)
+
+model.null = glmer(active~1 + (1|sessionid),
+                 family = binomial(),
+                 data = conditions.data)
+model.sel(model1, model.null) # null model selected
+
+```
+
+```{r Table1. activity budget of red dholes}
+
+# Table 1: Activity budget across treatments(conditions)
+table1 = b.data %>%
+  group_by(conditions) %>%
+  summarise(scent.mean = mean(scent)*100,
+            investigate.mean = mean(investigate)*100,
+            locomotion.mean = mean(locomotion)*100,
+            oos.mean = mean(oos)*100,
+            others.mean = mean(others)*100,
+            positive.int.mean = mean(positive.int)*100,
+            vigilance.mean = mean(vigilance)*100,
+            sleep.mean = mean(sleep)*100,
+            active.mean = mean(active)*100,
+            oos.se = plotrix::std.error(oos)*100,
+            oos.sd = sd(oos)*100,
+            active.se = plotrix::std.error(active)*100,
+            active.sd = sd(active)*100,
+            sleep.se = plotrix::std.error(sleep)*100)
+
+ggplot(data = table1) +
+  geom_errorbar(aes(x = conditions, ymin = oos.mean - oos.se, ymax = oos.mean + oos.se), width = 0.5) +
+  geom_point(aes(x=conditions, y=oos.mean), size=4, shape=21, fill="white")
+
+ggplot(data = table1) +
+  geom_errorbar(aes(x = Conditions, ymin = Active.mean - Active.se, ymax = Active.mean + Active.se), width = 0.5) +
+  geom_point(aes(x=Conditions, y=Active.mean), size=4, shape=21, fill="white") # active
+
+ggplot(data = table1) +
+  geom_errorbar(aes(x = Conditions, ymin = Sleep.mean - Sleep.se, ymax = Sleep.mean + Sleep.se), width = 0.5) +
+  geom_point(aes(x=Conditions, y=Sleep.mean), size=4, shape=21, fill="white") #inactive
+```
+
+```{r spatial analysis - prep work}
+# Taking out spatial data only
+spatial.data = data %>%
+  select(SessionID, Frame.Number, Observer, DateTime, Space.Use.Coordinate.X, Space.Use.Coordinate.Y,
+         Conditions, Cond.Locations1, Cond.Locations2) %>%
+  rename(X = Space.Use.Coordinate.X,
+         Y = Space.Use.Coordinate.Y) %>%
+  filter(DateTime >= "2022-06-06 14:56:00") %>%
+  filter_at(vars(X, Y), all_vars(!is.na(.)))
+
+# spatial.data$Y = spatial.data$Y*-1 #invert points because ZM fuck up
+
+# locations of each spray-area
+areas.df = data.frame(
+  Area = c("A", "B", "C", "D", "E", "F", "G", "H"),
+  X = c(78, 120, 193, 261, 282, 280, 378, 527),
+  Y = c(229,153,122,181,86,115,126,131)
+)
+# areas.df$Y = areas.df$Y*-1 #invert points because ZM fuck up
+
+# making outline of exhibit
+map = read.csv("CSV Files/exhibit_blueprint.csv")
+map = map[!is.na(map$Space.Use.Grid.X),]
+# map$Space.Use.Coordinate.Y = map$Space.Use.Coordinate.Y*-1 # invert the y-coords because of ZM fuck up
+map.polygon = list(cbind(map$Space.Use.Coordinate.X, map$Space.Use.Coordinate.Y)) #need list AND matrix for sf::st_polygon.
+map.polygon[[1]][15:15,1:2] = map.polygon[[1]][1:1,1:2] #first and last matrix value must be same to "close" the polygon (see later)
+map.polygon = sf::st_polygon(map.polygon) #make shape/polygonise
+
+```
+
+```{r outline plot}
+# plot of map.polygon and points for reference
+ggplot() + 
+  geom_sf(aes(), data=map.polygon) +
+  geom_point(aes(x = X, y = Y), data = spatial.data) + 
+  facet_wrap(.~Conditions)
+```
+
+```{r rsf analysis - prep work}
+# To find all distances from points to areas (see areas.df)
+for (i in 1:nrow(spatial.data)) {
+  spatial.data$distA[i] = EucDist(spatial.data[i, 5:6], areas.df[1, 2:3]) #see function; euc dist to area A
+  spatial.data$distB[i] = EucDist(spatial.data[i, 5:6], areas.df[2, 2:3]) #see function; euc dist to area B
+  spatial.data$distC[i] = EucDist(spatial.data[i, 5:6], areas.df[3, 2:3]) #see function; euc dist to area C
+  spatial.data$distD[i] = EucDist(spatial.data[i, 5:6], areas.df[4, 2:3]) #see function; euc dist to area D
+  spatial.data$distE[i] = EucDist(spatial.data[i, 5:6], areas.df[5, 2:3]) #see function; euc dist to area E
+  spatial.data$distF[i] = EucDist(spatial.data[i, 5:6], areas.df[6, 2:3]) #see function; euc dist to area F
+  spatial.data$distG[i] = EucDist(spatial.data[i, 5:6], areas.df[7, 2:3]) #see function; euc dist to area G
+  spatial.data$distH[i] = EucDist(spatial.data[i, 5:6], areas.df[8, 2:3]) #see function; euc dist to area H
+}
+```
+
+```{r rsf analysis baseline random effects are group count}
+# Create avail points
+# each avail point should correspond to a set of actual coords 
+# To take consideration of randome effects via sessionID
+
+bl.spatial = spatial.data %>%
+  filter(Conditions == "Baseline") %>%
+  select(SessionID, DateTime)
+bl.spatial = rbind(bl.spatial, bl.spatial) #replicating bl.spatial for 2*avail locs
+
+bl.spatial = sf::st_sample(map.polygon, size = nrow(bl.spatial)) %>% #replicate locs in map.polygon
+  sf::st_coordinates() %>%  #transform to coorids
+  cbind(., bl.spatial) #cbind to make a new df
+
+for (i in 1:nrow(bl.spatial)) { #find distances to areas
+  bl.spatial$distA[i] = EucDist(bl.spatial[i, 1:2], areas.df[1, 2:3])
+  bl.spatial$distB[i] = EucDist(bl.spatial[i, 1:2], areas.df[2, 2:3])
+  bl.spatial$distC[i] = EucDist(bl.spatial[i, 1:2], areas.df[3, 2:3])
+  bl.spatial$distD[i] = EucDist(bl.spatial[i, 1:2], areas.df[4, 2:3])
+  bl.spatial$distE[i] = EucDist(bl.spatial[i, 1:2], areas.df[5, 2:3])
+  bl.spatial$distF[i] = EucDist(bl.spatial[i, 1:2], areas.df[6, 2:3])
+  bl.spatial$distG[i] = EucDist(bl.spatial[i, 1:2], areas.df[7, 2:3])
+  bl.spatial$distH[i] = EucDist(bl.spatial[i, 1:2], areas.df[8, 2:3])
+}
+bl.spatial$used = 0
+
+bl.spatial.used = bl.spatial %>%
+  select(X,Y,SessionID,DateTime,distA,distB,distC,distD,distE,distF,distG,distH) %>%
+  mutate(used = 1)
+
+bl.spatial.rsf = rbind(bl.spatial, bl.spatial.used) %>%
+  mutate_at(vars(contains("dist")), rescale)
+
+rsf.model1 = bl.spatial.rsf %>%
+  select(-c("X", "Y")) %>%
+  glmer(used ~  distA + distB + distC + distD + distE + distF + distG + distH + (1|SessionID), #this error term needs to change
+      data = .,
+      family = binomial(link = "logit"))
+
+summary(rsf.model1) # 
+confint(rsf.model1,
+        level = 0.95,
+        parm = "beta_",
+        method = "Wald") # +CFG > ~AH > -DB > --E
+```
+
+```{r defunct (not mixed models) rsf analysis baseline}
+
+
+
+
+baseline.spatial.rsf.df %>%
+  filter(used == 1) %>%
+  select(-X, -Y) %>%
+  reshape2::melt(id = c("used")) %>%
+  ggplot() +
+  geom_area(aes(x = value, fill = variable, alpha = 0.5), stat = "bin") + 
+  facet_grid(variable~.)
+
+
+##
+##
+##
+require(broom); tidy(rsf.model1, conf.int = TRUE)
+
+require(GGally)
+ggcoef(tidy(rsf.model1, conf.int = TRUE) %>% subset(std.error < 200), 
+       sort = "ascending", exclude_intercept = TRUE) +
+  ggtitle("Coefficients: Simple logistic model RSF")
+
+
+ggplot() + 
+  geom_sf(aes(), data=map.polygon) +
+  geom_point(aes(x = X, y = Y, colour = used), data = baseline.spatial.rsf.df)
+
+baseline.spatial.rsf.df %>%
+  filter(used == 1) %>%
+ggplot() + 
+  geom_sf(aes(), data=map.polygon) +
+  geom_point(aes(x = X, y = Y)) + 
+  geom_point(aes(x = X, y=Y, colour = Area, size = 3), data = areas.df)
+```
+
+```{r rsf analysis baseline random effects are group count}
+# Create avail points
+# each avail point should correspond to a set of actual coords 
+# To take consideration of randome effects via sessionID
+
+bl.spatial = spatial.data %>%
+  filter(Conditions == "Baseline") %>%
+  select(SessionID, DateTime)
+bl.spatial = rbind(bl.spatial, bl.spatial) #replicating bl.spatial for 2*avail locs
+
+bl.spatial = sf::st_sample(map.polygon, size = nrow(bl.spatial)) %>% #replicate locs in map.polygon
+  sf::st_coordinates() %>%  #transform to coorids
+  cbind(., bl.spatial) #cbind to make a new df
+
+for (i in 1:nrow(bl.spatial)) { #find distances to areas
+  bl.spatial$distA[i] = EucDist(bl.spatial[i, 1:2], areas.df[1, 2:3])
+  bl.spatial$distB[i] = EucDist(bl.spatial[i, 1:2], areas.df[2, 2:3])
+  bl.spatial$distC[i] = EucDist(bl.spatial[i, 1:2], areas.df[3, 2:3])
+  bl.spatial$distD[i] = EucDist(bl.spatial[i, 1:2], areas.df[4, 2:3])
+  bl.spatial$distE[i] = EucDist(bl.spatial[i, 1:2], areas.df[5, 2:3])
+  bl.spatial$distF[i] = EucDist(bl.spatial[i, 1:2], areas.df[6, 2:3])
+  bl.spatial$distG[i] = EucDist(bl.spatial[i, 1:2], areas.df[7, 2:3])
+  bl.spatial$distH[i] = EucDist(bl.spatial[i, 1:2], areas.df[8, 2:3])
+}
+bl.spatial$used = 0
+
+bl.spatial.used = spatial.data %>%
+  filter(Conditions == "Baseline") %>%
+  select(X,Y,SessionID,DateTime,distA,distB,distC,distD,distE,distF,distG,distH) %>%
+  mutate(used = 1)
+
+bl.spatial.rsf = rbind(bl.spatial, bl.spatial.used) %>%
+  mutate_at(vars(contains("dist")), rescale)
+
+rsf.model1 = bl.spatial.rsf %>%
+  select(-c("X", "Y")) %>%
+  glmer(used ~  distA + distB + distC + distD + distE + distF + distG + distH + (1|SessionID),
+      data = .,
+      family = binomial(link = "logit"))
+
+summary(rsf.model1) # 
+confint(rsf.model1,
+        level = 0.95,
+        parm = "beta_",
+        method = "Wald") # +CFG > ~AH > -DB > --E
+```
+
+```{r rsf analysis - scents}
+scent.spatial = spatial.data %>%
+  select(SessionID, DateTime, Conditions)
+
+scent.spatial = rbind(scent.spatial, scent.spatial)
+
+scent.spatial = sf::st_sample(map.polygon, size = nrow(scent.spatial)) %>% #replicate locs in map.polygon
+  sf::st_coordinates() %>%  #transform to coorids
+  cbind(., scent.spatial) #cbind to make a new df
+
+for (i in 1:nrow(scent.spatial)) { #find distances to areas
+  scent.spatial$distA[i] = EucDist(scent.spatial[i, 1:2], areas.df[1, 2:3])
+  scent.spatial$distB[i] = EucDist(scent.spatial[i, 1:2], areas.df[2, 2:3])
+  scent.spatial$distC[i] = EucDist(scent.spatial[i, 1:2], areas.df[3, 2:3])
+  scent.spatial$distD[i] = EucDist(scent.spatial[i, 1:2], areas.df[4, 2:3])
+  scent.spatial$distE[i] = EucDist(scent.spatial[i, 1:2], areas.df[5, 2:3])
+  scent.spatial$distF[i] = EucDist(scent.spatial[i, 1:2], areas.df[6, 2:3])
+  scent.spatial$distG[i] = EucDist(scent.spatial[i, 1:2], areas.df[7, 2:3])
+  scent.spatial$distH[i] = EucDist(scent.spatial[i, 1:2], areas.df[8, 2:3])
+}
+
+scent.spatial$used = 0
+
+scent.spatial.used = spatial.data %>%
+  select(X, Y, SessionID, DateTime, Conditions, distA, distB, distC, distD, distE, distF, distG, distH) %>%
+  mutate(used = 1) 
+
+scent.spatial.rsf.df = rbind(scent.spatial, scent.spatial.used) %>%
+  mutate_at(vars(contains("dist")), rescale)
+
+rsf.model2 = scent.spatial.rsf.df %>%
+  filter(Conditions == "Leaves") %>%
+  select(-c("X", "Y")) %>%
+  glmer(used ~  distA + distB + distC + distD + distE + distF + distG + distH + (1|SessionID),
+      data = .,
+      family = binomial(link = "logit"))
+
+summary(rsf.model2) # 
+confint(rsf.model2,
+        level = 0.95,
+        parm = "beta_",
+        method = "Wald") # +CFG > ~AH > -DB > --E
+
+ggplot(scent.spatial.rsf.df) + 
+  geom_point(aes(x = X, y=Y, colour = used))
+```
+
+find diff between baseline and scent (should i regroup this?)
+then find diff between scent (Dist~cond1 versis Dist~cond2)
+
+```{r dist c test}
+model0 = lm(distC~1,
+            data = spatial.data)
+model1 = lm(distC~Conditions, #includes BL as a category
+            data = spatial.data)
+
+model.sel(model0, model1)
+confint(model1)
+summary(model1)
+```
+
+```{r dist a test}
+model0 = lm(distA~1,
+            data = spatial.data)
+model1 = lm(distA~Conditions, #includes BL as a category
+            data = spatial.data)
+
+model.sel(model0, model1)
+confint(model1)
+summary(model1)
+```
+
+```{r defunct}
+# Resource selection functions - test
+# Areas A, F, H are selected for with regards to treatment'ed days.
+
+confint(model1) #Cinnamon, Coffee, Perfume
+
+fig.plot = spatial.data %>%
+  group_by(Conditions) %>%
+  summarise(dist.A = mean(distA),
+            dist.B = mean(distB),
+            dist.C = mean(distC),
+            dist.D = mean(distD),
+            dist.E = mean(distE),
+            dist.F = mean(distF),
+            dist.G = mean(distG),
+            dist.H = mean(distH))
+
+fig.plot = fig.plot %>%
+  reshape2::melt(id = c("Conditions"))
+
+fig.plot1 = fig.plot %>%
+  group_by(variable) %>%
+  mutate(scaled.dist = scales::rescale(value))
+
+ggplot(fig.plot1) +
+  geom_point(aes(x = variable, y = scaled.dist, colour = Conditions))
+
+fig.plot2 = fig.plot %>%
+  group_by(Conditions) %>%
+  mutate(scaled.dist = scales::rescale(value))
+
+conditions1.plot = spatial.data %>%
+  group_by(Conditions, Cond.Locations1) %>%
+  summarise(dist.A = mean(distA),
+            dist.B = mean(distB),
+            dist.C = mean(distC),
+            dist.D = mean(distD),
+            dist.E = mean(distE),
+            dist.F = mean(distF),
+            dist.G = mean(distG),
+            dist.H = mean(distH))
+
+conditions2.plot = spatial.data %>%
+  group_by(Conditions, Cond.Locations2) %>%
+  summarise(dist.A = mean(distA),
+            dist.B = mean(distB),
+            dist.C = mean(distC),
+            dist.D = mean(distD),
+            dist.E = mean(distE),
+            dist.F = mean(distF),
+            dist.G = mean(distG),
+            dist.H = mean(distH))
+
+conditions2.plot = conditions2.plot %>%
+  reshape2::melt(id = c("Conditions", "Cond.Locations2"))
+
+ggplot(conditions2.plot) +
+  geom_point(aes(x = variable, y = value, colour = Cond.Locations2)) +
+  facet_grid(.~Conditions)
+```
+
+

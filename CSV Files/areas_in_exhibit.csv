@@ -1,0 +1,18 @@
+SessionID,Configuration Name,Observer,DeviceID,Edited,Session Start Time,Recorded Start Time,Session End Time,DateTime,Date,Time,Year,Month,Hour,Project Animals,Duration,Habitat Map,Grid Size,Image Size,Notes,Channel Type,Subject Type,Focal Name,Group Count,Frame Number,Interval Channel 1 Name,Interval Channel 1 Value,Space Use Grid X,Space Use Grid Y,Space Use Grid XY,Space Use Coordinate X,Space Use Coordinate Y,Space Use Coordinate XY,Question:,Area
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:20,7/2/23,17:20:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 01,,1,,,2,4,"2, 4",78,229,"78, 229",for mapping work,A
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:20,7/2/23,17:20:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 02,,1,,,3,3,"3, 3",120,153,"120, 153",for mapping work,B
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:20,7/2/23,17:20:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 03,,1,,,4,3,"4, 3",193,122,"193, 122",for mapping work,C
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:20,7/2/23,17:20:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 04,,1,,,6,4,"6, 4",261,181,"261, 181",for mapping work,D
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:20,7/2/23,17:20:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 05,,1,,,6,2,"6, 2",282,86,"282, 86",for mapping work,E
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:20,7/2/23,17:20:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 06,,1,,,6,2,"6, 2",280,115,"280, 115",for mapping work,F
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:21,7/2/23,17:21:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 01,,2,,,8,3,"8, 3",378,126,"378, 126",for mapping work,G
+2684,Red dhole scent,ACI: Wang Dajun,9d93cfba-e70d-4cf4-8fdd-94bd9b049ee1,No,7/2/23 17:19,7/2/23 17:19,7/2/23 17:22,7/2/23 17:21,7/2/23,17:21:15,2023,2,17,"Red Dhole,Red Dhole 1,Red Dhole 2,Red Dhole 3,Red Dhole 4,Red Dhole 5,Red Dhole 6",15,Dhole Exhibit,"12,10",600x600,,Interval,Group,Red Dhole 02,,2,,,11,3,"11, 3",527,131,"527, 131",for mapping work,H
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,78,-229,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,120,-153,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,193,-122,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,261,-181,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,282,-86,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,280,-115,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,378,-126,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,527,-131,,,
